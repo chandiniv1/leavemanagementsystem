@@ -38,6 +38,7 @@ const adminCollection = "Admin"
 func init() {
 	mongoCtx = context.Background()
 	db, err := mongo.Connect(mongoCtx, options.Client().ApplyURI("mongodb://localhost:27017"))
+	//db, err := mongo.Connect(mongoCtx, options.Client().ApplyURI("mongodb+srv://chandini:chandini123@cluster0.3miveyv.mongodb.net/?retryWrites=true&w=majority"))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -59,7 +60,6 @@ type Student struct {
 	StudentID   string `json:"studentid"`
 	StudentName string `json:"studentname"`
 	Email       string `json:"email"`
-	Status      string `json:"status"`
 }
 
 type StudentCredentails struct {
@@ -69,8 +69,8 @@ type StudentCredentails struct {
 }
 
 type AdminCredentials struct {
-	AdminName     string `json:"adminname`
-	AdminPassword string `json:"password`
+	AdminName     string `json:"adminname"`
+	AdminPassword string `json:"password"`
 }
 
 type LeaveRequest struct {
@@ -159,6 +159,7 @@ func main() {
 	r.HandleFunc("/setadmincredentials", SetAdminCredentials).Methods("POST")
 	r.HandleFunc("/adminlogin", AdminLogin).Methods("POST")
 	fmt.Println("attempting to start server")
+	//log.Fatal(http.ListenAndServe(":1234", r))
 	log.Fatal(http.ListenAndServe(":8000", r))
 }
 
@@ -242,7 +243,7 @@ func StudentLogin(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			json.NewEncoder(w).Encode(ErrorResponse{
 				Status:  400,
-				Message: fmt.Sprintf("cant add the student will null values2. err=", err),
+				Message: fmt.Sprintf("cant add the student will null values2. err= %v", err),
 			})
 		} else {
 			tokenString, _ := CreateJWT(loginRequest.Name)
@@ -304,7 +305,7 @@ func AdminLogin(w http.ResponseWriter, r *http.Request) {
 		h := sha256.New()
 		h.Write([]byte(hashpassword))
 		loginRequest.AdminPassword = hex.EncodeToString(h.Sum(nil))
-		var err = userdetailsdb.FindOne(ctx, bson.M{
+		var err = admindb.FindOne(ctx, bson.M{
 			"adminname": loginRequest.AdminName,
 			"password":  loginRequest.AdminPassword,
 		}).Decode(&result)
@@ -314,7 +315,7 @@ func AdminLogin(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			json.NewEncoder(w).Encode(ErrorResponse{
 				Status:  400,
-				Message: fmt.Sprintf("cant add the student will null values2. err=", err),
+				Message: fmt.Sprintf("cant add the student will null values2. err=%v", err),
 			})
 		} else {
 			tokenString, _ := CreateJWT(loginRequest.AdminName)
@@ -371,7 +372,7 @@ func SetAdminCredentials(w http.ResponseWriter, r *http.Request) {
 	admin.AdminPassword = hex.EncodeToString(h.Sum(nil))
 
 	//inserting the students data into the database
-	result, err := userdetailsdb.InsertOne(mongoCtx, admin)
+	result, err := admindb.InsertOne(mongoCtx, admin)
 	if err != nil {
 		json.NewEncoder(w).Encode(JsonResponseAdminCredentials{
 			Status:  400,
